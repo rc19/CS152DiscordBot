@@ -1,1 +1,3 @@
 tokens.json
+*.log
+__pycache__/

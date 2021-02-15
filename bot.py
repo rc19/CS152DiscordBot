@@ -27,13 +27,19 @@ with open(token_path) as f:
 
 
 class ModBot(discord.Client):
+    DEL_MSG_EMOJI = '💩'
+    BAN_USER_EMOJI = '🚷'
     def __init__(self, key):
         intents = discord.Intents.default()
         super().__init__(command_prefix='.', intents=intents)
         self.group_num = None   
         self.mod_channels = {} # Map from guild to the mod channel id for that guild
         self.reports = {} # Map from user IDs to the state of their report
+        self.automatic_flag_reports = {}  # Track the status of automatic flagging based on moderators' judgement
+        self.mod_channel_messages = {}
         self.perspective_key = key
+        self.tox_threshold = 0.5
+        self.flirt_threshold = 0.7
 
     async def on_ready(self):
         print(f'{self.user.name} has connected to Discord! It is these guilds:')
@@ -61,11 +67,15 @@ class ModBot(discord.Client):
         '''
         # Ignore messages from us 
         if message.author.id == self.user.id:
+            if message.guild and message.channel.name == f'group-{self.group_num}-mod':
+                self.mod_channel_messages[message.id] = message
             return
         
         # Check if this message was sent in a server ("guild") or if it's a DM
+        
         if message.guild:
-            await self.handle_channel_message(message)
+            if message.channel.name == f'group-{self.group_num}':
+                await self.handle_channel_message(message)                
         else:
             await self.handle_dm(message)
 
@@ -98,17 +108,40 @@ class ModBot(discord.Client):
             self.reports.pop(author_id)
 
     async def handle_channel_message(self, message):
-        # Only handle messages sent in the "group-#" channel
-        if not message.channel.name == f'group-{self.group_num}':
-            return 
-        
         # Forward the message to the mod channel
         mod_channel = self.mod_channels[message.guild.id]
-        await mod_channel.send(f'Forwarded message:\n{message.author.name}: "{message.content}"')
-
         scores = self.eval_text(message)
-        await mod_channel.send(self.code_format(json.dumps(scores, indent=2)))
+        
+        tmp = [scores[k] for k in scores if k != 'FLIRTATION']
+        if max(tmp) > self.tox_threshold or scores['FLIRTATION'] > self.flirt_threshold:
+            self.automatic_flag_reports[message.id] = message
+            await mod_channel.send(f'Forwarded message:\n{message.author.name}: "#{message.id}#{message.content}"'+'\n'+
+                                        self.code_format(json.dumps(scores,indent=2)))
 
+    async def on_raw_reaction_add(self, payload):
+        '''
+        Handles the moderator's action to an automatically flagged message based on an emoji
+        '''
+        if payload.guild_id and payload.channel_id == self.mod_channels[payload.guild_id].id and payload.event_type == 'REACTION_ADD':
+            message = self.mod_channel_messages.pop(payload.message_id)
+            main_channel_message_id = message.split(':')[2].split('#')[1]
+            main_channel_message = self.automatic_flag_reports.pop(main_channel_message_id)
+            if payload.emoji.name == self.DEL_MSG_EMOJI:
+                main_channel_message.delete()
+                await self.mod_channels[payload.guild_id].send(f'Deleted the following message:\n{message.author.name}:"{message.content}"')
+            elif payload.emoji.name == self.BAN_USER_EMOJI:
+                await self.mod_channels[payload.guild_id].send(f'Shadow Banning the user:\n{message.author.name} for sending "{message.content}"')
+                
+    async def on_raw_message_edit(self, payload):
+        '''
+        Handle edited messages in the main channel
+        '''
+        if 'guild_id' in payload.data and payload.data['channel_id'] != self.mod_channels[int(payload.data['guild_id'])].id:
+            guild = self.get_guild(int(payload.data['guild_id']))
+            channel = guild.get_channel(int(payload.channel_id))
+            message = await channel.fetch_message(int(payload.message_id))
+            await self.handle_channel_message(message)            
+            
     def eval_text(self, message):
         '''
         Given a message, forwards the message to Perspective and returns a dictionary of scores.
@@ -118,7 +151,7 @@ class ModBot(discord.Client):
         url = PERSPECTIVE_URL + '?key=' + self.perspective_key
         data_dict = {
             'comment': {'text': message.content},
-            'languages': ['en'],
+            # 'languages': ['en'],
             'requestedAttributes': {
                                     'SEVERE_TOXICITY': {}, 'PROFANITY': {},
                                     'IDENTITY_ATTACK': {}, 'THREAT': {},
