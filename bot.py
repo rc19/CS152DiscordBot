@@ -124,13 +124,21 @@ class ModBot(discord.Client):
         '''
         if payload.guild_id and payload.channel_id == self.mod_channels[payload.guild_id].id and payload.event_type == 'REACTION_ADD':
             message = self.mod_channel_messages.pop(payload.message_id)
-            main_channel_message_id = message.split(':')[2].split('#')[1]
-            main_channel_message = self.automatic_flag_reports.pop(main_channel_message_id)
+            main_channel_message_id = message.content.split(':')[2].split('#')[1]
+            try:
+                main_channel_message = self.automatic_flag_reports.pop(int(main_channel_message_id))
+            except:
+                print("This message has already been handled!")
+                return 
             if payload.emoji.name == self.DEL_MSG_EMOJI:
-                main_channel_message.delete()
-                await self.mod_channels[payload.guild_id].send(f'Deleted the following message:\n{message.author.name}:"{message.content}"')
+                # Simulate delete
+                await self.mod_channels[payload.guild_id].send(f'Deleted the following message:\n{main_channel_message.author.name}:"{main_channel_message.content}"')
             elif payload.emoji.name == self.BAN_USER_EMOJI:
-                await self.mod_channels[payload.guild_id].send(f'Shadow Banning the user:\n{message.author.name} for sending "{message.content}"')
+                # Simulate shadow ban
+                await self.mod_channels[payload.guild_id].send(f'Shadow Banning the user:\n{main_channel_message.author.name} for sending "{main_channel_message.content}"')
+            else:
+                # False positive case
+                await self.mod_channels[payload.guild_id].send(f'This was a false positive:\n{main_channel_message.author.name} sent "{main_channel_message.content}"')
                 
     async def on_raw_message_edit(self, payload):
         '''
