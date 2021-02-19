@@ -7,11 +7,16 @@ class State(Enum):
     AWAITING_MESSAGE = auto()
     MESSAGE_IDENTIFIED = auto()
     REPORT_COMPLETE = auto()
+    POTENTIAL_CHILD_SOLICITATION = auto()
 
 class Report:
     START_KEYWORD = "report"
     CANCEL_KEYWORD = "cancel"
     HELP_KEYWORD = "help"
+    UNDERAGE_KEYWORD = "under"
+    OVERAGE_KEYWORD = "over"
+    BLOCK_KEYWORD = "block"
+    DO_NOT_BLOCK_KEYWORD = "no block"
 
     def __init__(self, client):
         self.state = State.REPORT_START
@@ -56,13 +61,39 @@ class Report:
             # Here we've found the message - it's up to you to decide what to do next!
             self.state = State.MESSAGE_IDENTIFIED
             return ["I found this message:", "```" + message.author.name + ": " + message.content + "```", \
-                    "This is all I know how to do right now - it's up to you to build out the rest of my reporting flow!"]
+                    f"We are sorry to hear that you received a concerning message. In order to properly prioritize your message, will you \
+                    let us know if you are under 18? Please respond \"{UNDERAGE_KEYWORD}\" or \"{OVERAGE_KEYWORD}\": "]
         
         if self.state == State.MESSAGE_IDENTIFIED:
-            return ["<insert rest of reporting flow here>"]
+            if message.content == UNDERAGE_KEYWORD:
+                self.state = State.POTENTIAL_CHILD_SOLICITATION
+                return [f"Thanks so much for letting us know. You are so brave! For your safety, we've prevented this user from contacting \
+                        you again. {send_solicitation_resources()} "]
+            else if message.content == OVERAGE_KEYWORD:
+                self.state = State.REPORT_COMPLETE
+                return [f"Thanks for letting us know! We will contact you when we have reviewed your case. In the meantime, would you like \
+                to block the user from this conversation? Reply \"{BLOCK_KEYWORD}\" or \"{DO_NOT_BLOCK_KEYWORD}\":"]
+            else:
+                return [f"I'm sorry, I didn't get that. In order to properly prioritize your message, will you \
+                        let us know if you are under 18? Please respond \"{UNDERAGE_KEYWORD}\" or \"{OVERAGE_KEYWORD}\": "]
+        
+        if self.state == State.POTENTIAL_CHILD_SOLICITATION:
+            self.state = State.REPORT_COMPLETE
+            return [f"Hey there! We detected some potentially dangerous content in your conversation. For your safety, we've prevented this \
+                    user from contacting you again. {send_solicitation_resources()}"]          
 
         return []
 
+    def send_solicitation_resources():
+        return """
+        Hey, just so you know, it is NOT your fault if you experienced something  
+        uncomfortable or did something you think you maybe shouldn't have done. You're a kid and you're still learning. The fault is 
+        ALWAYS on the adults. Here are some educational and emotional resources for you to look at in the meantime as we're reviewing your case. 
+            https://www.missingkids.org/gethelpnow/csam-resources 
+            https://www.pacer.org/cmh/
+            https://childmind.org/
+        """
+        
     def report_complete(self):
         return self.state == State.REPORT_COMPLETE
     
