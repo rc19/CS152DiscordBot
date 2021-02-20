@@ -69,7 +69,7 @@ class Report:
                 self.state = State.POTENTIAL_CHILD_SOLICITATION
                 return [f"Thanks so much for letting us know. You are so brave! For your safety, we've prevented this user from contacting \
                         you again. {send_solicitation_resources()} "]
-            else if message.content == OVERAGE_KEYWORD:
+            elif message.content == OVERAGE_KEYWORD:
                 self.state = State.REPORT_COMPLETE
                 return [f"Thanks for letting us know! We will contact you when we have reviewed your case. In the meantime, would you like \
                 to block the user from this conversation? Reply \"{BLOCK_KEYWORD}\" or \"{DO_NOT_BLOCK_KEYWORD}\":"]
