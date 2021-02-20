@@ -1,4 +1,5 @@
 from enum import Enum, auto
+from typing import Text
 import discord
 import re
 
@@ -62,30 +63,30 @@ class Report:
             self.state = State.MESSAGE_IDENTIFIED
             return ["I found this message:", "```" + message.author.name + ": " + message.content + "```", \
                     f"We are sorry to hear that you received a concerning message. In order to properly prioritize your message, will you \
-                    let us know if you are under 18? Please respond \"{UNDERAGE_KEYWORD}\" or \"{OVERAGE_KEYWORD}\": "]
+                    let us know if you are under 18? Please respond \"{self.UNDERAGE_KEYWORD}\" or \"{self.OVERAGE_KEYWORD}\": "]
         
         if self.state == State.MESSAGE_IDENTIFIED:
-            if message.content == UNDERAGE_KEYWORD:
+            if message.content == self.UNDERAGE_KEYWORD:
                 self.state = State.POTENTIAL_CHILD_SOLICITATION
                 return [f"Thanks so much for letting us know. You are so brave! For your safety, we've prevented this user from contacting \
-                        you again. {send_solicitation_resources()} "]
-            elif message.content == OVERAGE_KEYWORD:
+                        you again. {self.send_solicitation_resources()} "]
+            elif message.content == self.OVERAGE_KEYWORD:
                 self.state = State.REPORT_COMPLETE
                 return [f"Thanks for letting us know! We will contact you when we have reviewed your case. In the meantime, would you like \
-                to block the user from this conversation? Reply \"{BLOCK_KEYWORD}\" or \"{DO_NOT_BLOCK_KEYWORD}\":"]
+                to block the user from this conversation? Reply \"{self.BLOCK_KEYWORD}\" or \"{self.DO_NOT_BLOCK_KEYWORD}\":"]
             else:
                 return [f"I'm sorry, I didn't get that. In order to properly prioritize your message, will you \
-                        let us know if you are under 18? Please respond \"{UNDERAGE_KEYWORD}\" or \"{OVERAGE_KEYWORD}\": "]
+                        let us know if you are under 18? Please respond \"{self.UNDERAGE_KEYWORD}\" or \"{self.OVERAGE_KEYWORD}\": "]
         
         if self.state == State.POTENTIAL_CHILD_SOLICITATION:
             self.state = State.REPORT_COMPLETE
             return [f"Hey there! We detected some potentially dangerous content in your conversation. For your safety, we've prevented this \
-                    user from contacting you again. {send_solicitation_resources()}"]          
+                    user from contacting you again. {self.send_solicitation_resources()}"]          
 
         return []
 
-    def send_solicitation_resources():
-        return """
+    def send_solicitation_resources(self):
+        text1 = """
         Hey, just so you know, it is NOT your fault if you experienced something  
         uncomfortable or did something you think you maybe shouldn't have done. You're a kid and you're still learning. The fault is 
         ALWAYS on the adults. Here are some educational and emotional resources for you to look at in the meantime as we're reviewing your case. 
@@ -93,6 +94,7 @@ class Report:
             https://www.pacer.org/cmh/
             https://childmind.org/
         """
+        return text1
         
     def report_complete(self):
         return self.state == State.REPORT_COMPLETE

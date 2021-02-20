@@ -1,3 +1,5 @@
 tokens.json
+
+ *.vscode/
 *.log
 __pycache__/
