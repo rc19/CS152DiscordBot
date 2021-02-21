@@ -60,7 +60,7 @@ class Report:
             # Here we've found the message - it's up to you to decide what to do next!
             self.state = State.MESSAGE_IDENTIFIED
             return ["I found this message: ", "```" + message.author.name + ": " + message.content + "```", \
-                f"We are sorry to hear that you received a concerning message. In order to properly prioritize your message, will you let us know if you are under 18? Please respond \"`{self.UNDERAGE_KEYWORD}`\" or \"`{self.OVERAGE_KEYWORD}`\": "]
+                f"We are sorry to hear that you received a concerning message. In order to properly prioritize your message, will you let us know if you are under 18? Please respond \"`{resources.UNDERAGE_KEYWORD}`\" or \"`{resources.OVERAGE_KEYWORD}`\": "]
         
         if self.state == State.MESSAGE_IDENTIFIED:
             if message.content == resources.UNDERAGE_KEYWORD:
