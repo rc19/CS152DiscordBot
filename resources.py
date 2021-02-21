@@ -1,0 +1,14 @@
+DEL_MSG_EMOJI = '💩'
+BAN_USER_EMOJI = '🚷'
+REPORT_AND_BAN_EMOJI = '🚓'
+RESOLVED_NO_ACTION = '☑️'
+
+
+
+
+UNDERAGE_KEYWORD = "under"
+OVERAGE_KEYWORD = "over"
+BLOCK_KEYWORD = "block"
+DO_NOT_BLOCK_KEYWORD = "no block"
+
+

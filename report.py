@@ -2,6 +2,7 @@ from enum import Enum, auto
 from typing import Text
 import discord
 import re
+import resources
 
 class State(Enum):
     REPORT_START = auto()
@@ -14,10 +15,7 @@ class Report:
     START_KEYWORD = "report"
     CANCEL_KEYWORD = "cancel"
     HELP_KEYWORD = "help"
-    UNDERAGE_KEYWORD = "under"
-    OVERAGE_KEYWORD = "over"
-    BLOCK_KEYWORD = "block"
-    DO_NOT_BLOCK_KEYWORD = "no block"
+
 
     def __init__(self, client):
         self.state = State.REPORT_START
@@ -61,22 +59,21 @@ class Report:
 
             # Here we've found the message - it's up to you to decide what to do next!
             self.state = State.MESSAGE_IDENTIFIED
-            return ["I found this message:", "```" + message.author.name + ": " + message.content + "```", \
-                    f"We are sorry to hear that you received a concerning message. In order to properly prioritize your message, will you \
-                    let us know if you are under 18? Please respond \"{self.UNDERAGE_KEYWORD}\" or \"{self.OVERAGE_KEYWORD}\": "]
+            return ["I found this message: ", "```" + message.author.name + ": " + message.content + "```", \
+                f"We are sorry to hear that you received a concerning message. In order to properly prioritize your message, will you let us know if you are under 18? Please respond \"`{self.UNDERAGE_KEYWORD}`\" or \"`{self.OVERAGE_KEYWORD}`\": "]
         
         if self.state == State.MESSAGE_IDENTIFIED:
-            if message.content == self.UNDERAGE_KEYWORD:
+            if message.content == resources.UNDERAGE_KEYWORD:
                 self.state = State.POTENTIAL_CHILD_SOLICITATION
                 return [f"Thanks so much for letting us know. You are so brave! For your safety, we've prevented this user from contacting \
-                        you again. {self.send_solicitation_resources()} "]
-            elif message.content == self.OVERAGE_KEYWORD:
+                        you again.{self.send_solicitation_resources()} "]
+            elif message.content == resources.OVERAGE_KEYWORD:
                 self.state = State.REPORT_COMPLETE
                 return [f"Thanks for letting us know! We will contact you when we have reviewed your case. In the meantime, would you like \
-                to block the user from this conversation? Reply \"{self.BLOCK_KEYWORD}\" or \"{self.DO_NOT_BLOCK_KEYWORD}\":"]
+                to block the user from this conversation? Reply \"{resources.BLOCK_KEYWORD}\" or \"{resources.DO_NOT_BLOCK_KEYWORD}\":"]
             else:
                 return [f"I'm sorry, I didn't get that. In order to properly prioritize your message, will you \
-                        let us know if you are under 18? Please respond \"{self.UNDERAGE_KEYWORD}\" or \"{self.OVERAGE_KEYWORD}\": "]
+                        let us know if you are under 18? Please respond \"{resources.UNDERAGE_KEYWORD}\" or \"{resources.OVERAGE_KEYWORD}\": "]
         
         if self.state == State.POTENTIAL_CHILD_SOLICITATION:
             self.state = State.REPORT_COMPLETE

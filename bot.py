@@ -1,11 +1,13 @@
 # bot.py
 import discord
 from discord.ext import commands
+from datetime import datetime
 import os
 import json
 import logging
 import re
 import requests
+import resources
 from report import Report
 
 # Set up logging to the console
@@ -29,6 +31,7 @@ with open(token_path) as f:
 class ModBot(discord.Client):
     DEL_MSG_EMOJI = '💩'
     BAN_USER_EMOJI = '🚷'
+    REPORT_AND_BAN_EMOJI = '🚓'
     def __init__(self, key):
         intents = discord.Intents.default()
         super().__init__(command_prefix='.', intents=intents)
@@ -115,8 +118,12 @@ class ModBot(discord.Client):
         tmp = [scores[k] for k in scores if k != 'FLIRTATION']
         if max(tmp) > self.tox_threshold or scores['FLIRTATION'] > self.flirt_threshold:
             self.automatic_flag_reports[message.id] = message
-            await mod_channel.send(f'Forwarded message:\n{message.author.name}: "#{message.id}#{message.content}"'+'\n'+
-                                        self.code_format(json.dumps(scores,indent=2)))
+            await mod_channel.send(f'**Suspected message:**\n**Suspected abuser:** {message.author.name} \n**Message ID:**__`#{message.id}#`__ **Message Content:** `{message.content}`'+'\n'+
+                                        '**Message Suspicion Score:**\n'+self.code_format(json.dumps(scores,indent=2))+'\n'+'Please use one of the following reactions:'+'\n\n'+resources.DEL_MSG_EMOJI+' `Delete` the reported message'
+                                        +'\n\n'+resources.BAN_USER_EMOJI+' `Ban` the reported user'
+                                        +'\n\n'+resources.REPORT_AND_BAN_EMOJI+' `Ban` the reported user and `Escalate` this incident to local authorities'
+                                        +'\n\n'+resources.RESOLVED_NO_ACTION+' Mark this report as `Resolved` with no further actions'
+                                        +'\n\n'+'Select any other reaction to mark the report as false alarm')
 
     async def on_raw_reaction_add(self, payload):
         '''
@@ -124,21 +131,27 @@ class ModBot(discord.Client):
         '''
         if payload.guild_id and payload.channel_id == self.mod_channels[payload.guild_id].id and payload.event_type == 'REACTION_ADD':
             message = self.mod_channel_messages.pop(payload.message_id)
-            main_channel_message_id = message.content.split(':')[2].split('#')[1]
+            main_channel_message_id = message.content.split(':')[3].split('#')[1]
             try:
                 main_channel_message = self.automatic_flag_reports.pop(int(main_channel_message_id))
             except:
                 print("This message has already been handled!")
                 return 
-            if payload.emoji.name == self.DEL_MSG_EMOJI:
+            if payload.emoji.name == resources.DEL_MSG_EMOJI:
                 # Simulate delete
-                await self.mod_channels[payload.guild_id].send(f'Deleted the following message:\n{main_channel_message.author.name}:"{main_channel_message.content}"')
-            elif payload.emoji.name == self.BAN_USER_EMOJI:
+                await self.mod_channels[payload.guild_id].send(f'**Deleted** the following message:\n\n**From:** `{main_channel_message.author.name}`  **Message ID:**__`#{message.id}#`__   **Message Content:** : "`{main_channel_message.content}`" \n**At** `{datetime.now()}`')
+            elif payload.emoji.name == resources.BAN_USER_EMOJI:
                 # Simulate shadow ban
-                await self.mod_channels[payload.guild_id].send(f'Shadow Banning the user:\n{main_channel_message.author.name} for sending "{main_channel_message.content}"')
+                await self.mod_channels[payload.guild_id].send(f'**Shadow Banning** the user:\n`{main_channel_message.author.name}` for sending **Message ID:**__`#{message.id}#`__   **Message Content:** : "`{main_channel_message.content}`" \n**At** `{datetime.now()}`')
+            elif payload.emoji.name == resources.REPORT_AND_BAN_EMOJI:
+                # Simulate baning a user and sending the report to authorities
+                await self.mod_channels[payload.guild_id].send(f'`{main_channel_message.author.name}` is **Banded** for sending : **Message ID:**__`#{message.id}#`__   **Message Content:** : "`{main_channel_message.content}`" \n**At** `{datetime.now()}` this report has been shared with local authorities.')
+            elif payload.emoji.name == resources.RESOLVED_NO_ACTION:
+                # Simulate Resolved with no action. 
+                await self.mod_channels[payload.guild_id].send(f'\nThis report has been marked as **Resolved** with no further actions.')
             else:
                 # False positive case
-                await self.mod_channels[payload.guild_id].send(f'This was a false positive:\n{main_channel_message.author.name} sent "{main_channel_message.content}"')
+                await self.mod_channels[payload.guild_id].send(f'This was a false positive:\n`{main_channel_message.author.name}`  {payload.emoji.name}  Sent **Message ID:**__`#{message.id}#`__   **Message Content:** : "`{main_channel_message.content}`" \n**At** `{datetime.now()}`')
                 
     async def on_raw_message_edit(self, payload):
         '''
