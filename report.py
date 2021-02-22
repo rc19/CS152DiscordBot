@@ -66,8 +66,6 @@ class Report:
             # Here we've found the message - it's up to you to decide what to do next!
             self.state = State.MESSAGE_IDENTIFIED
             Report.reported_message = message
-            Report.reported_user = message
-            print(Report.reported_message)
             return ["I found this message: ", "```" + message.author.name + ": " + message.content + "```",
                     "If this is not the right message, type `cancel` and restart to reporting process.\n" +
                     "Otherwise, let me know which of the following abuse types this message is\n" +
@@ -85,7 +83,7 @@ class Report:
             elif message.content == resources.OVERAGE_KEYWORD:
                 return [f"Thanks for letting us know! We will contact you when we have reviewed your case. In the meantime, would you like to block the user from this conversation? Reply `{resources.BLOCK_KEYWORD}` or `{resources.DO_NOT_BLOCK_KEYWORD}`:"]
             elif message.content == resources.BLOCK_KEYWORD:
-                self.state = State.REPORT_COMPLETE
+                self.state = State.REPORT_SUBMITID
                 return [f"We have **Blocked** {message.author.name} and prevented the account from any future interactions.\nYour report is **Successfully submitted**\n**Reported user:** `{message.author.name}` **Reported message:** `{message.content}` \n**At:**`{datetime.now()}`"]
             elif message.content == resources.DO_NOT_BLOCK_KEYWORD:
                 self.state = State.REPORT_SUBMITID
