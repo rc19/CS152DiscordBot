@@ -12,18 +12,21 @@ class State(Enum):
     MESSAGE_IDENTIFIED = auto()
     REPORT_COMPLETE = auto()
     POTENTIAL_CHILD_SOLICITATION = auto()
+    REPORT_SUBMITID = auto()
 
 
 class Report:
     START_KEYWORD = "report"
     CANCEL_KEYWORD = "cancel"
     HELP_KEYWORD = "help"
+    reported_message = None
+    reported_user = None
+    type = None
 
     def __init__(self, client):
         self.state = State.REPORT_START
         self.client = client
         self.message = None
-        self.type = None
 
     async def handle_message(self, message):
         '''
@@ -62,6 +65,9 @@ class Report:
 
             # Here we've found the message - it's up to you to decide what to do next!
             self.state = State.MESSAGE_IDENTIFIED
+            Report.reported_message = message
+            Report.reported_user = message
+            print(Report.reported_message)
             return ["I found this message: ", "```" + message.author.name + ": " + message.content + "```",
                     "If this is not the right message, type `cancel` and restart to reporting process.\n" +
                     "Otherwise, let me know which of the following abuse types this message is\n" +
@@ -71,7 +77,7 @@ class Report:
 
         if self.state == State.MESSAGE_IDENTIFIED:
             if message.content == resources.INTIMATE_KEYWORD or message.content == resources.SELF_KEYWORD or message.content == resources.HATE_KEYWORD or message.content == resources.HATE_KEYWORD or message.content == resources.SELF_KEYWORD or message.content == resources.OTHER_KEYWORD:
-                self.type = message.content
+                Report.type = message.content
                 return [f"\nWe are sorry to hear that you received a concerning message. In order to properly prioritize your message, will you let us know if you are under the age of 18?\nPlease respond `{resources.UNDERAGE_KEYWORD}` or `{resources.OVERAGE_KEYWORD}` "]
             if message.content == resources.UNDERAGE_KEYWORD:
                 self.state = State.POTENTIAL_CHILD_SOLICITATION
@@ -82,19 +88,17 @@ class Report:
                 self.state = State.REPORT_COMPLETE
                 return [f"We have **Blocked** {message.author.name} and prevented the account from any future interactions.\nYour report is **Successfully submitted**\n**Reported user:** `{message.author.name}` **Reported message:** `{message.content}` \n**At:**`{datetime.now()}`"]
             elif message.content == resources.DO_NOT_BLOCK_KEYWORD:
-                self.state = State.REPORT_COMPLETE
+                self.state = State.REPORT_SUBMITID
                 return [f"Your report is **Successfully submitted**\n**Reported user:** `{message.author.name}` **Reported message:** `{message.content}` \n**At:**`{datetime.now()}`"]
             else:
                 return [f"I'm sorry, I didn't get that. In order to properly prioritize your message, will you let us know if you are under 18? Please respond `{resources.UNDERAGE_KEYWORD}` or `{resources.OVERAGE_KEYWORD}`: "]
 
         if self.state == State.POTENTIAL_CHILD_SOLICITATION:
-            self.state = State.REPORT_COMPLETE
             return self.send_solicitation_resources()
 
         return []
 
     def send_solicitation_resources(self):
-        self.state = State.REPORT_COMPLETE
         text1 = """
     Hey, just so you know, it is NOT your fault if you experienced something uncomfortable or did something you think you maybe shouldn't have done.
     You're a kid and you're still learning. The fault is ALWAYS on the adults. 
@@ -107,3 +111,9 @@ class Report:
 
     def report_complete(self):
         return self.state == State.REPORT_COMPLETE
+
+    def report_submitted(self):
+        return self.state == State.REPORT_SUBMITID
+
+    def child_solicitation(self):
+        return self.state == State.POTENTIAL_CHILD_SOLICITATION
